@@ -1,5 +1,6 @@
 #include <stdio.h>
 <<<<<<< HEAD
+<<<<<<< HEAD
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -117,11 +118,6 @@ int main(int argc, char *argv[])
 
 
 }		
-=======
 
-void main(void)
-{
-    printf("hello,world!/n");
-    printf("hello, world /n");
-}
->>>>>>> 9c78fbf2ba547c427c71aea96ed2643b9e1b55fe
+
+

@@ -99,7 +99,7 @@ void signal_handler(int nSingal)
 	for(int t = 8; t >=1;t--) //system off sound
         {
 		buzzerPlaySong(t);
-                usleep(400000);
+                usleep(50000);
         }
 	buzzerStopSong();
 	printf("hello button exit\n");
@@ -109,15 +109,21 @@ void signal_handler(int nSingal)
 	exit(0);
 }
 
-void* accel_do(void *arg)
+
+void* msg_ingame(void *arg)
 {
-	while(receive.keyInput != 5)
+	while(1)
 	{
-	accel();
-	game_handle_logic(accel_data[0]);
+	msgrcv(msgID, &receive.keyInput, sizeof(receive.keyInput),0,0);
+	if(receive.keyInput == 5)
+	{
+		pthread_exit(0);
+		break;
 	}
-	pthread_exit(0);
+	}
+
 }
+
 
 int main(void)
 {	
@@ -130,16 +136,16 @@ int main(void)
         {
 		ledOnOff(p-1,1); //turn on the led
                 buzzerPlaySong(p);
-                usleep(400000);
+                usleep(50000);
 		ledStatus();
         }
 	for(int t = 7; t >=0;t--) //system off sound
         {
-                ledOnOff(t,0);
-                usleep(100000);
-        }
+           	 ledOnOff(t,0);
+		 usleep(50000);
+		 ledStatus();
+	}
 	buzzerStopSong();
-	receive.messageNum = 0;
 	receive.keyInput = 0;
 	receive.pressed = 0;
         msgID = msgget(MESSAGE_ID, IPC_CREAT|0666);
@@ -158,9 +164,17 @@ int main(void)
                                 printf("home\n");
                                 break;
                         case 3: //search key
-				pthread_create(&accl, NULL, &(accel_do), NULL);
-		                pthread_join(accl,NULL);//when button 5(menu)is selected thread exit
-				break;
+				pthread_create(&accl,NULL,&msg_ingame,NULL);
+			        while(1)
+				 {
+       				 accel();
+        			 game_handle_logic(accel_data[0]);
+				 if(receive.keyInput == 5)
+				 {
+					 pthread_detach(accl);
+					 break;
+				 }
+        			 }
                         case 4:
                                 printf("back\n");
                                 break;

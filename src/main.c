@@ -1,123 +1,106 @@
+#include "button.h"
+#include "buzzer.h"
+#include "led.h"
 #include <stdio.h>
-<<<<<<< HEAD
-<<<<<<< HEAD
 #include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <string.h>
-#include <sys/msg.h>
-#include <linux/input.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <dirent.h>
+#include <ctype.h>
+#include <sys/ipc.h>
+#include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <sys/msg.h>
+#include <pthread.h>
+#include <linux/input.h>
+#include <signal.h>
 
-#define INPUT_DEVICE_LIST "/dev/input/event"
+int freIndex;
+
+static int msgID;
 
 
-#define PROBE_FILE "/proc/bus/input/devices"
-
-#define HAVE_TO_FIND_1 "N: Name=\"ecube-button\"\n"
-#define HAVE_TO_FIND_2 "H: Handlers=kbd event"
-
-int probeButtonPath(char *newPath)
+void signal_handler(int nSingal)
 {
-        int returnValue = 0;
-        int number = 0;
-        FILE *fp = fopen(PROBE_FILE, "rt");
-        while(!feof(fp))
+	printf("Good-bye!\n");
+	for(int t = 8; t >=1;t--) //system off sound
         {
-                char tmpStr[200];
-                fgets(tmpStr,200,fp);
-                printf("%s",tmpStr);
-                if(strcmp(tmpStr,HAVE_TO_FIND1) == 0)
+		buzzerPlaySong(t);
+                usleep(400000);
+        }
+	buzzerStopSong();
+	printf("hello button exit\n");
+        buttonExit();
+        ledLibExit();
+
+	exit(0);
+}
+
+int main(void)
+{	
+	ledLibInit();
+	ledStatus();
+	findBuzzerSysPath();
+	buzzerInit();
+	signal(SIGINT,signal_handler);
+	for(int p = 1; p <= 8;p++) //system start sound
+        {
+		ledOnOff(p-1,1); //turn on the led
+                buzzerPlaySong(p);
+                usleep(400000);
+		ledStatus();
+        }
+	for(int t = 7; t >=0;t--) //system off sound
+        {
+                ledOnOff(t,0);
+                usleep(100000);
+        }
+	buzzerStopSong();
+        BUTTON_MSG_T receive;
+        msgID = msgget(MESSAGE_ID, IPC_CREAT|0666);
+        buttonInit();
+
+        while(1)
+        {
+                printf("hello im in while loop\n");
+                msgrcv(msgID, &receive.keyInput, sizeof(receive.keyInput),0,0);
+                switch(receive.keyInput)
                 {
-                        printf("YES! I found!: %s\r\n", tmpStr);
-                        returnValue = 1; //found
+                        case 1:
+                                printf("vlm up\n");
+                                break;
+                        case 2:
+                                printf("home\n");
+                                break;
+                        case 3:
+                                printf("search\n");
+                                break;
+                        case 4:
+                                printf("back\n");
+                                break;
+                        case 5:
+                                printf("menu\n");
+                                break;
+                        case 6:
+				printf("vlm dwn\n");
+				break;
                 }
-                if((returnValue == 1) && (strncasecmp(tmpStr,HAVE_TO_FIND_2, strlen(HAVE_TO_FIND_2))) == 0)
+                msgrcv(msgID, &receive.pressed, sizeof(receive.pressed),0,0);
+                switch(receive.pressed)
                 {
-                        printf("-->%s",tmpStr);
-                        printf("\t%c\r\n",tmpStr[strlen(tmpStr)-3]) - '0';
-                        break;
+                        case 1:	
+				buzzerPlaySong(1);
+                                printf("btn pressed\n");
+				usleep(100000);
+				buzzerStopSong();
+                                break;
+                        case 2:
+                                printf("btn unpressed..?\n");
+                                break;
+
                 }
         }
-fclose(fp);
-if(returnValue == 1)
-{
-        sprintf(newPath,"%s%d",INPUT_DEVICE_LIST,number);
-        return returnValue;
+        return 0;
 }
-}
-
-
-
-
-
-
-int score1, score2, score3;
-
-
-int main(int argc, char *argv[])
-{
-	int fp_button;
-	int readSize, inputIndex;
-	struct input_event stEvent;
-	char inputDevPath[200] = {0,};
-	if( probeButtonPath(inputDevPath) == 0)
-	{
-		printf("ERROR! File Not Found!\r\n");
-		printf("Did you insmod?\r\n");
-		return 0;
-	}
-
-	printf("inputDevPath: %s\r\n", O_RDONLY);
-	fp = open(inputDevPath, O_RDONLY);
-	while(1)
-	{
-		readSize = read(fp, &stEvent, sizeof(stEvent));
-		if (readSize != sizeof(stEvent))
-		{
-			continue;
-		}
-
-		if(stEvent.type == EV_KEY)
-		{
-			printf("EV_KEY");
-			switch(stEvent.code)
-			{
-				case KEY_VOLUMEUP: printf("Volume up key):");
-						   //add volume up func(or different func)
-						   break;
-				case KEY_HOME: printf("Home key):");
-					       //add home func (return to home)
-					       break;
-				case KEY_SEARCH: printf("Search key):");
-						//add enter func(select)
-						 break;
-				case KEY_BACK: printf("Back key):");
-					       //back func
-					       break;
-				case KEY_MENU: printf("Menu key):");
-					       //open the menu
-					       break;
-				case KEY_VOLUMEDOWN: printf("Volume down key):");
-						     //add volume down func (maybe different func..?)
-						     break;
-
-
-			}
-			if(stEvent.value) printf("pressed\n");
-			else printf("released\n");
-
-		}
-		else
-		;
-	}
-
-	close(fp_button);
-
-
-
-
-}		
-
-
 

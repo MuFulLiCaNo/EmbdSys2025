@@ -66,40 +66,46 @@ int accel(void){
     return 0;
 }
 
-int game_handle_logic(int accel_d) //accel_d is accel_data[0]
-{
-	printf("%d\n",accel_d);
-	int STABLE,LEFT_weak, LEFT_strong, RIGHT_weak, RIGHT_strong;
-	STABLE = (accel_d < 700) && (accel_d > -700); //go straight in stable
-	LEFT_weak = (accel_d > 1000) && (accel_d < 3000);
-	LEFT_strong = accel_d > 3000;
-	RIGHT_weak = (accel_d < -1000) && (accel_d > -3000);
-	RIGHT_strong = accel_d < -3000;
-		if(STABLE)
-		{
-			printf("car goes straight\n");
-		}
-		else if(LEFT_weak)
-		{
-			printf("car goes little bit left\n");
-		}
-		else if(LEFT_strong)
-		{
-			printf("car goes very left\n");
-		}
-		else if(RIGHT_weak)
-		{
-			printf("car goes little bit right\n");
-		}
-		else if(RIGHT_strong)
-		{
-			printf("car goes very right\n");
-		}
-		else
-		{
-			;
-		}
-		return 0;
+int game_handle_logic(int accel_d) {//accel_d is accel_data[0]
+    {	int distance = 0;
+        printf("%d\n",accel_d);
+        int STABLE,LEFT_weak, LEFT_strong, RIGHT_weak, RIGHT_strong;
+        STABLE = (accel_d < 700) && (accel_d > -700); //go straight in stable
+        LEFT_weak = (accel_d > 1000) && (accel_d < 3000);
+        LEFT_strong = accel_d > 3000;
+        RIGHT_weak = (accel_d < -1000) && (accel_d > -3000);
+        RIGHT_strong = accel_d < -3000;
+            if(STABLE)
+            {
+                printf("car goes straight\n");
+                distance = 0;
+            }
+            else if(LEFT_weak)
+            {
+                printf("car goes little bit left\n");
+                distance = -5;
+            }
+            else if(LEFT_strong)
+            {
+                printf("car goes very left\n");
+                distance = -10;
+            }
+            else if(RIGHT_weak)
+            {
+                printf("car goes little bit right\n");
+                distance = 5;
+            }
+            else if(RIGHT_strong)
+            {
+                printf("car goes very right\n");
+                distance = 10;
+            }
+            else
+            {
+                ;
+            }
+            return distance;
+    }
 }
 
 
@@ -257,13 +263,14 @@ void game_loop() {
     int car_lane = 1;
     int carY_offset = 0;
     while (1) {
+        accel();
+        int distance = game_handle_logic(accel_data[0]); // 이동 방향 및 양 판단
+        carY_offset += distance;
         draw_game_scene(car_lane, carY_offset);
         usleep(30000);
 
         char input = getchar();
-        if (input == 'w') carY_offset -= 10;
-        else if (input == 's') carY_offset += 10;
-        else if (input == 'q') break;
+        if (input == 'q') break;
     }
 }
 

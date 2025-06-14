@@ -83,22 +83,22 @@ int game_handle_logic(int accel_d) {//accel_d is accel_data[0]
             else if(LEFT_weak)
             {
                 printf("car goes little bit left\n");
-                distance = -5;
+                distance = 5;
             }
             else if(LEFT_strong)
             {
                 printf("car goes very left\n");
-                distance = -10;
+                distance = 10;
             }
             else if(RIGHT_weak)
             {
                 printf("car goes little bit right\n");
-                distance = 5;
+                distance = -5;
             }
             else if(RIGHT_strong)
             {
                 printf("car goes very right\n");
-                distance = 10;
+                distance = -10;
             }
             else
             {

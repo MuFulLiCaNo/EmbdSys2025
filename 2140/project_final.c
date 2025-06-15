@@ -572,7 +572,6 @@ int main(void)
                 case KEY_SEARCH:
                     if (gameState==STATE_MINI_GAME)
                     {
-                        isPaused = !isPaused;
                         update_leaderboard(elapsed_ms);
                         draw_bmp_image("minigame.bmp"); fb_update();
                         if(minigame_over)
@@ -656,11 +655,11 @@ int main(void)
                 update_leaderboard(elapsed_ms);
                 reset_all_systems(); 
                 draw_bmp_image("game_over.bmp"); fb_update();
-                if(msg.keyInput == KEY_MENU)
+                if(msg.keyInput == KEY_SEARCH)
                 {
-                draw_bmp_image("minigame.bmp"); fb_update();
+                    gameState = STATE_MINI_GAME;
                 }
-                else if(msg.keyInput == KEY_HOME)
+                else if(msg.keyInput == KEY_MENU)
                 {
                     gameState = STATE_GAME_MENU;
                 }

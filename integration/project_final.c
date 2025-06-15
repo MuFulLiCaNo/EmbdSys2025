@@ -235,6 +235,80 @@ void fb_update(void)
 }
 
 
+
+void draw_car_sprite(int carX, int carY) {
+    const int carW = 120;
+    const int carH = 192;
+
+    for (int y = 0; y < carH; y++) {
+        for (int x = 0; x < carW; x++) {
+            // 둥글게 잘라내기: 모서리 곡선 처리
+            int dx = x - carW / 2;
+            int dy = (y < carH / 2) ? (carH / 4 - y) : (y - carH * 3 / 4);
+            int dist_sq = dx * dx + dy * dy;
+
+            if ((y < 20 || y > carH - 20) && (x < 20 || x > carW - 20) && dist_sq > 22 * 22)
+                continue; // 바깥 둥근 영역 제외
+
+            // 회전: 좌측으로 90도 회전
+            int newX = carX + (carH - 1 - y);
+            int newY = carY + x;
+
+            if (newX < 0 || newX >= fbWidth || newY < 0 || newY >= fbHeight)
+                continue;
+
+            uint32_t color = 0xFF2A2A; // 기본 차체: 강렬한 레드
+
+            // 바퀴 영역 (곡선 타원 바퀴 느낌)
+            if ((x < 15 || x > 105) && (y > 24 && y < 168)) {
+                color = 0x1A1A1A; // 진한 회색 바퀴
+            }
+
+            // 윈도우 루프 영역
+            if (y > 50 && y < 142 && x > 30 && x < 90) {
+                color = 0x111111;
+            }
+
+            // 앞유리
+            if (y < 36 && x > 35 && x < 85) {
+                color = 0x66BFFF;
+            }
+
+            // 뒷유리
+            if (y > 156 && x > 35 && x < 85) {
+                color = 0x66BFFF;
+            }
+
+            // 자동차 루프 라인
+            if (y == 50 || y == 142) {
+                color = 0x222222;
+            }
+
+            // 라이트 (앞)
+            if (y < 10 && ((x > 18 && x < 38) || (x > 82 && x < 102))) {
+                color = 0xFFFF66;
+            }
+
+            // 라이트 (뒤)
+            if (y > 182 && ((x > 18 && x < 38) || (x > 82 && x < 102))) {
+                color = 0xFF3333;
+            }
+
+            // 도어 핸들
+            if ((y > 80 && y < 85) && (x == 34 || x == 86)) {
+                color = 0xDDDDDD;
+            }
+
+            // 중앙 스트라이프
+            if (x > 58 && x < 62) {
+                color = 0x000000;
+            }
+
+            pfbmap[newY * fbWidth + newX] = color;
+        }
+    }
+}
+
 int load_bmp(const char *file, unsigned char **rgb, int *w, int *h)
 {
     FILE *fp = fopen(file,"rb");
@@ -306,11 +380,7 @@ void draw_game_scene(int offset)
     if (carY < 0)            carY = 0;
     if (carY + carW > fbHeight) carY = fbHeight - carW;
 
-    uint32_t red = make_pixel(0xFF,0x00,0x00);
-    for (int y = carY; y < carY + carW; ++y)
-        for (int x = carX; x < carX + carH; ++x)
-            put_px(pbackbuffer, y, x, red);
-
+    draw_car_sprite(carX,carY);
     /* 4) 장애물 */
     uint32_t blue = make_pixel(0x00,0x00,0xFF);
     for (int i = 0; i < MAX_OBSTACLES; ++i)

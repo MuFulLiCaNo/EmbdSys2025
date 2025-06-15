@@ -1,5 +1,5 @@
 /**********************************************************************
- *  project_final.c — Frame‑buffer 기반 자동차 게임 (완전 통합판)
+ * project_final.c — Frame‑buffer 기반 자동차 게임 (완전 통합판)
  *********************************************************************/
 
 #include <stdio.h>
@@ -115,6 +115,15 @@ int  compare_records(const void*, const void*);
 char user_life_str[4];
 int minigame_over;
 int striked_obs;
+void minigame(void);
+
+void minigame(void)
+{
+    // 미니게임 모드 진입 시 화면 표시
+    printf("Mini-Game Mode Entered!\n");
+    draw_bmp_image("minigame.bmp");
+    fb_update();
+}
 
 void init_obstacles(void)
 {
@@ -426,8 +435,8 @@ bool check_collision(int car_lane, int carY_offset) {
     if (carY < 0) carY = 0;
     if (carY + CAR_SPRITE_HEIGHT > fbHeight) carY = fbHeight - CAR_SPRITE_HEIGHT;
     
-    // 자동차의 실제 충돌 영역을 약간 축소 (더 정확한 충돌 감지)
-    int carMargin = 10; // 자동차 충돌 영역 여백
+
+    int carMargin = 10;
     int carLeft = carX + carMargin;
     int carRight = carX + CAR_SPRITE_WIDTH - carMargin;
     int carTop = carY + carMargin;
@@ -436,8 +445,7 @@ bool check_collision(int car_lane, int carY_offset) {
     for (int i = 0; i < MAX_OBSTACLES; i++) {
         if (obstacles[i].active) {
             int obsX = obstacles[i].x;
-            
-            // 타이어 크기를 그리기와 동일하게 설정
+        
             int obsW = CAR_ORIG_WIDTH * 0.6;  // 높이 (Y)
             int obsH = CAR_ORIG_HEIGHT * 0.6; // 폭   (X)
             int obsY;
@@ -506,6 +514,7 @@ void reset_all_systems(void)
     isPaused=0; elapsed_ms=0; paused_duration_ms=0; carY_offset=0;
     for(int i=0;i<8;i++) ledOnOff(i,0);
     fndDisp(0,0); init_obstacles();
+    text("","");
 }
 
 int main(void)
@@ -532,52 +541,52 @@ int main(void)
     BUTTON_MSG_T msg;
     while (1)
     {  
-        /* 버튼 비동기 수신 */
         if (msgrcv(msgID,&msg,sizeof(msg.keyInput)+sizeof(msg.pressed),0,IPC_NOWAIT)!=-1)
         {
             buzzerPlaySong(5); usleep(100000); buzzerStopSong();
             switch(msg.keyInput)
             {
                 case KEY_HOME:
-                    if (gameState==STATE_GAME_MENU||gameState==STATE_GAME_OVER)
+                    if (gameState == STATE_GAME_MENU || gameState == STATE_GAME_OVER)
                     {
                         text("HELLO USER","MAIN MENU");
                         reset_all_systems();
                         draw_bmp_image("Title_start.bmp"); fb_update(); sleep(2);
                         user_life = 3;
-                        if(msg.keyInput)
-                        {
-                        gameState = STATE_LED_COUNTDOWN;
-                        }
-                    } break;
-
-                case KEY_BACK:
-                    if (gameState==STATE_GAME_RUNNING||isPaused)
-                    {
-                        isPaused=!isPaused;
-                        if(isPaused) gettimeofday(&pauseTime,NULL);
-                        else {
-                            struct timeval r;gettimeofday(&r,NULL);
-                            paused_duration_ms += (r.tv_sec-pauseTime.tv_sec)*1000 +
-                                                  (r.tv_usec-pauseTime.tv_usec)/1000;
-                        }
-                    } 
-                    else if (gameState==STATE_GAME_OVER)
-                    {
-                        user_life = 3;
                         gameState = STATE_LED_COUNTDOWN;
                     }
                     break;
 
-                case KEY_SEARCH:
-                    if (gameState==STATE_MINI_GAME)
+                case KEY_BACK:
+                    if (gameState == STATE_GAME_RUNNING || isPaused)
                     {
-                        update_leaderboard(elapsed_ms);
-                        draw_bmp_image("minigame.bmp"); fb_update();
-                        if(minigame_over)
+                        isPaused = !isPaused;
+                        if (isPaused)
                         {
-                            isPaused = !isPaused;
+                            gettimeofday(&pauseTime, NULL);
                         }
+                        else
+                        {
+                            struct timeval resumeTime;
+                            gettimeofday(&resumeTime, NULL);
+                            paused_duration_ms += (resumeTime.tv_sec - pauseTime.tv_sec) * 1000 +
+                                                  (resumeTime.tv_usec - pauseTime.tv_usec) / 1000;
+                        }
+                    }
+                    break;
+                
+                case KEY_MENU:
+                    gameState = STATE_GAME_MENU;
+                    reset_all_systems();
+                    draw_bmp_image("Title.bmp");
+                    fb_update();
+                    break;
+
+                case KEY_SEARCH: 
+                    if (gameState == STATE_GAME_OVER)
+                    {
+                        gameState = STATE_MINI_GAME;
+                        minigame();
                     }
                     break;
             }
@@ -600,6 +609,11 @@ int main(void)
                 }
                 gettimeofday(&startTime,NULL);
                 gettimeofday(&lastSpawnTime,NULL);
+                
+                char life_display_str[17];
+                sprintf(life_display_str, "LIFE: %d", user_life);
+                text(life_display_str, "");
+
                 gameState = STATE_GAME_RUNNING;
             }
             else if (gameState==STATE_GAME_RUNNING)
@@ -609,8 +623,6 @@ int main(void)
                              (now.tv_usec-startTime.tv_usec)/1000 -
                               paused_duration_ms;
                 display_time_on_fnd(elapsed_ms);
-                
-                sprintf(user_life_str,"%d",user_life);
                 
 
                 if ((now.tv_sec-lastSpawnTime.tv_sec)*1000 +
@@ -633,7 +645,7 @@ int main(void)
                     usleep(50000);
                     buzzerStopSong();
                     }
-                    text("WATCH OUT!","LIFE -1");
+                    text("WATCH OUT!","LIFE -1"); 
                     
                     if(user_life == 0)
                     {
@@ -644,30 +656,14 @@ int main(void)
                     }
                     else
                     {
-                        // 생명이 남아있으면 잠깐 멈춤 후 계속
                         sleep(1);
+                        char life_display_str[17];
+                        sprintf(life_display_str, "LIFE: %d", user_life);
+                        text(life_display_str, "");
                     }
                 }
-                
             }   
-            else if(gameState == STATE_GAME_OVER)
-            {
-                update_leaderboard(elapsed_ms);
-                reset_all_systems(); 
-                draw_bmp_image("game_over.bmp"); fb_update();
-                if(msg.keyInput == KEY_SEARCH)
-                {
-                    gameState = STATE_MINI_GAME;
-                }
-                else if(msg.keyInput == KEY_MENU)
-                {
-                    gameState = STATE_GAME_MENU;
-                }
-            }
-
-
         }
-         
     }
     return 0;
 }

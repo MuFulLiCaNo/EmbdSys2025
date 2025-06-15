@@ -13,7 +13,7 @@ int text(const char *str1 , const char *str2)
 	int fd;
 	int len;
 
-	memeset(&stlcd,0,sizeof(stTextLCD));
+	memset(&stlcd,0,sizeof(stTextLCD));
 
 	stlcd.cmdData = CMD_DATA_WRITE_LINE_1;
 	len =strlen(str1);

@@ -180,7 +180,7 @@ void update_obstacles(void)
     {
         if (obstacles[i].active)
         {
-            obstacles[i].x += 15;
+            obstacles[i].x += 30;
             if (obstacles[i].x > fbWidth) obstacles[i].active = false;
         }
     }
@@ -364,29 +364,55 @@ void draw_game_scene(int offset)
         }
     }
 
-    // 장애물 그리기 (lane 기반)
-    uint32_t red = make_pixel(0xFF, 0x00, 0x00);
+    // 타이어 장애물 그리기 (크기 정확히 맞춤)
+    uint32_t tireColor = 0x000000;    // 타이어 본체 (검정색)
+    uint32_t treadColor = 0xFFFFFF;   // 휠자국 (흰색)
+    
     for (int i = 0; i < MAX_OBSTACLES; i++) {
         if (obstacles[i].active) {
             int obsX = obstacles[i].x;
             int obsLane = obstacles[i].lane;
-            
-            int obsW = CAR_ORIG_WIDTH * 0.8;
-            int obsH = CAR_ORIG_HEIGHT * 0.4;
+
+            // 타이어 크기를 더 정확하게 설정 (충돌 감지와 동일하게)
+            int obsW = CAR_ORIG_WIDTH * 0.5;  // 높이 (Y) - 0.6에서 0.5로 축소
+            int obsH = CAR_ORIG_HEIGHT * 0.5; // 폭   (X) - 0.6에서 0.5로 축소
             int obsY;
-    
+
             switch (obsLane) {
                 case 0: obsY = fbHeight / 6 - obsW / 2; break;
                 case 1: obsY = fbHeight / 2 - obsW / 2; break;
                 case 2: obsY = fbHeight * 5 / 6 - obsW / 2; break;
                 default: obsY = fbHeight / 2 - obsW / 2;
             }
-    
-            for (int y = obsY; y < obsY + obsW; y++) {
-                for (int x = obsX; x < obsX + obsH; x++) {
-                    if (x >= 0 && x < fbWidth && y >= 0 && y < fbHeight) {
-                        put_px(pbackbuffer, y, x, red);
+
+            int tread1 = obsW / 4;
+            int tread2 = obsW / 2;
+            int tread3 = obsW * 3 / 4;
+
+            for (int y = 0; y < obsW; y++) {
+                for (int x = 0; x < obsH; x++) {
+                    int drawX = obsX + x;
+                    int drawY = obsY + y;
+                    if (drawX < 0 || drawX >= fbWidth || drawY < 0 || drawY >= fbHeight)
+                        continue;
+
+                    uint32_t color;
+
+                    // --- 휠자국: 세로 3줄, 굵게 ---
+                    if ((y >= tread1 - 1 && y <= tread1 + 1) ||
+                        (y >= tread2 - 1 && y <= tread2 + 1) ||
+                        (y >= tread3 - 1 && y <= tread3 + 1)) {
+                        color = treadColor;
+                    } else {
+                        // --- 그라데이션 적용: 중심 → 밝게, 가장자리 → 어둡게 ---
+                        float distFromCenter = fabs((float)x - obsH / 2) / (obsH / 2); // 0 ~ 1
+                        float brightness = 1.0f - distFromCenter * 0.6f;  // 중앙은 1.0, 가장자리는 0.4
+
+                        int gray = (int)(brightness * 50); // 0 ~ 50 정도의 밝기 차이
+                        color = (gray << 16) | (gray << 8) | gray; // RGB 동일한 회색 조합
                     }
+
+                    *((uint32_t*)((uint8_t*)pbackbuffer + drawY * line_length) + drawX) = color;
                 }
             }
         }
@@ -400,16 +426,20 @@ bool check_collision(int car_lane, int carY_offset) {
     if (carY < 0) carY = 0;
     if (carY + CAR_SPRITE_HEIGHT > fbHeight) carY = fbHeight - CAR_SPRITE_HEIGHT;
     
-    int carLeft = carX;
-    int carRight = carX + CAR_SPRITE_WIDTH;
-    int carTop = carY;
-    int carBottom = carY + CAR_SPRITE_HEIGHT;
+    // 자동차의 실제 충돌 영역을 약간 축소 (더 정확한 충돌 감지)
+    int carMargin = 10; // 자동차 충돌 영역 여백
+    int carLeft = carX + carMargin;
+    int carRight = carX + CAR_SPRITE_WIDTH - carMargin;
+    int carTop = carY + carMargin;
+    int carBottom = carY + CAR_SPRITE_HEIGHT - carMargin;
     
     for (int i = 0; i < MAX_OBSTACLES; i++) {
         if (obstacles[i].active) {
             int obsX = obstacles[i].x;
-            int obsW = CAR_ORIG_WIDTH * 0.8;
-            int obsH = CAR_ORIG_HEIGHT * 0.4;
+            
+            // 타이어 크기를 그리기와 동일하게 설정
+            int obsW = CAR_ORIG_WIDTH * 0.6;  // 높이 (Y)
+            int obsH = CAR_ORIG_HEIGHT * 0.6; // 폭   (X)
             int obsY;
             
             switch (obstacles[i].lane) {
@@ -419,11 +449,13 @@ bool check_collision(int car_lane, int carY_offset) {
                 default: obsY = fbHeight / 2 - obsW / 2;
             }
             
+            // 타이어의 실제 충돌 영역 (여백 없음 - 정확한 충돌)
             int obsLeft = obsX;
             int obsRight = obsX + obsH;
             int obsTop = obsY;
             int obsBottom = obsY + obsW;
             
+            // 충돌 감지 - 더 정확한 범위
             if (carLeft < obsRight && carRight > obsLeft &&
                 carTop < obsBottom && carBottom > obsTop) {
                 striked_obs = i;
@@ -553,6 +585,9 @@ int main(void)
                         draw_bmp_image("Title.bmp"); fb_update();
                     }
                     break;
+                case KEY_MENU:
+                    draw_bmp_image("Title.bmp"); fb_update();
+                    break;
             }
         }
 
@@ -562,7 +597,7 @@ int main(void)
             if (gameState==STATE_LED_COUNTDOWN)
             {
                 long best=read_best_record();
-                if(best!=-1){display_time_on_fnd(best);usleep(300000);fndDisp(0,0);usleep(300000);}
+                if(best!=-1){display_time_on_fnd(best);usleep(1000);fndDisp(0,0);usleep(1000);}
                 for(int i=0;i<3;i++)ledOnOff(i,1);usleep(300000);
                 for(int i=2;i>=0;i--)
                 {
@@ -587,7 +622,7 @@ int main(void)
                 text("USER LIFE:",user_life_str);
 
                 if ((now.tv_sec-lastSpawnTime.tv_sec)*1000 +
-                    (now.tv_usec-lastSpawnTime.tv_usec)/1000 > 1500)
+                    (now.tv_usec-lastSpawnTime.tv_usec)/1000 > 3000)
                 { spawn_obstacle(); lastSpawnTime=now; }
 
                 update_obstacles();
@@ -622,22 +657,13 @@ int main(void)
                     }
                 }
                 
-                // 시간 제한 (60초)
-                if (elapsed_ms >= 60000)
-                {
-                    printf("Time up!\n");
-                    update_leaderboard(elapsed_ms);
-                    gameState = STATE_GAME_OVER;
-                    draw_bmp_image("game_over.bmp"); fb_update(); fndDisp(0,0);
-                }
             }   
             else if(gameState == STATE_GAME_OVER)
             {
                 draw_bmp_image("game_over.bmp"); fb_update();
             }
         }
-        
-        usleep(30000); 
+         
     }
     return 0;
 }

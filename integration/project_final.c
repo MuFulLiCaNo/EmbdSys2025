@@ -146,10 +146,10 @@ int game_handle_logic(int accel_d)
     int RIGHT_strong= accel_d < -3000;
 
     if (STABLE)          return  0;
-    else if (LEFT_weak)  return  5;
-    else if (LEFT_strong)return 10;
-    else if (RIGHT_weak) return -5;
-    else if (RIGHT_strong)return-10;
+    else if (LEFT_weak)  return  10;
+    else if (LEFT_strong)return 20;
+    else if (RIGHT_weak) return -10;
+    else if (RIGHT_strong)return -20;
     return 0;
 }
 
@@ -559,6 +559,7 @@ int main(void)
                     {
                         printf("Collision!\n");
                         user_life--;
+                        text("WATCH OUT!","LIFE -1");
                         if(user_life == 0)
                         {
                             update_leaderboard(elapsed_ms);

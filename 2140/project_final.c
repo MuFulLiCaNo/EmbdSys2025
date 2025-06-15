@@ -1,5 +1,5 @@
 /**********************************************************************
- *  project_final.c — Frame‑buffer 기반 자동차 게임 (완전 통합판)
+ * project_final.c — Frame‑buffer 기반 자동차 게임 (완전 통합판)
  *********************************************************************/
 
 #include <stdio.h>
@@ -22,7 +22,7 @@
 #include <stdbool.h>
 #include <linux/kd.h>
 #include <dirent.h>
-#include <stdint.h>   
+#include <stdint.h>  
 #include "textlcd.h"
 #include "led.h"
 #include "button.h"
@@ -54,22 +54,23 @@ volatile int user_life;
 static int gameState = STATE_GAME_MENU;
 static int isPaused  = 0;
 static int msgID     = 0;
+int minigame_over;
+int minigame_win;
+int led_stop;
+int led_now;
 
 static int fbfd = -1;
 struct fb_var_screeninfo fbinfo;
 struct fb_fix_screeninfo fbfix;
 int fbWidth, fbHeight;
-int line_length;                 
+int line_length;                
 
-
-pthread_t text_ingame;
-
-static unsigned long *pfbmap      = NULL; 
-static unsigned long *pbackbuffer = NULL; 
+static unsigned long *pfbmap      = NULL;
+static unsigned long *pbackbuffer = NULL;
 static size_t         backbufBytes= 0;
 
 static uint32_t car_sprite[CAR_SPRITE_HEIGHT][CAR_SPRITE_WIDTH];
-
+BUTTON_MSG_T msg;
 static struct timeval startTime, pauseTime, lastSpawnTime;
 static long   elapsed_ms         = 0;
 static long   paused_duration_ms = 0;
@@ -97,32 +98,6 @@ static inline void put_px(void *buf, int y, int x, uint32_t px)
     line[x] = px;
 }
 
-void fb_close(void);
-void fb_update(void);
-void fb_clear(void);
-void signal_handler(int);
-void reset_all_systems(void);
-void init_obstacles(void);
-void init_car_sprite(void);
-bool check_collision(int car_lane, int offset);
-void draw_game_scene(int offset);
-void draw_bmp_image(const char *file);
-int  load_bmp(const char *file, unsigned char **rgb, int *w, int *h);
-void spawn_obstacle(void);
-void update_obstacles(void);
-int  game_handle_logic(int accel_d);
-void display_time_on_fnd(long ms);
-long read_best_record(void);
-void update_leaderboard(long);
-int  compare_records(const void*, const void*);
-char user_life_str[4];
-int minigame_over;
-int striked_obs;
-int run_once = 0;
-int led_stop;
-BUTTON_MSG_T msg;
-int led_now;
-int minigame_win;
 void mini_game(void)
 {
     minigame_over = 0;
@@ -168,8 +143,35 @@ void mini_game(void)
 }
 
 
+void fb_close(void);
+void fb_update(void);
+void fb_clear(void);
+void signal_handler(int);
+void reset_all_systems(void);
+void init_obstacles(void);
+void init_car_sprite(void);
+bool check_collision(int car_lane, int offset);
+void draw_game_scene(int offset);
+void draw_bmp_image(const char *file);
+int  load_bmp(const char *file, unsigned char **rgb, int *w, int *h);
+void spawn_obstacle(void);
+void update_obstacles(void);
+int  game_handle_logic(int accel_d);
+void display_time_on_fnd(long ms);
+long read_best_record(void);
+void update_leaderboard(long);
+int  compare_records(const void*, const void*);
+char user_life_str[4];
+int minigame_over;
+int striked_obs;
+void minigame(void);
 
-
+int led_now;
+int minigame_win;
+int minigame_over;
+int led_stop;
+int run_once;
+char life_display_str[17];
 
 void init_obstacles(void)
 {
@@ -191,7 +193,7 @@ void spawn_obstacle(void)
 }
 
 void init_car_sprite(void) {
-    memset(car_sprite, 0, sizeof(car_sprite)); 
+    memset(car_sprite, 0, sizeof(car_sprite));
 
     for (int y = 0; y < CAR_ORIG_HEIGHT; y++) {
         for (int x = 0; x < CAR_ORIG_WIDTH; x++) {
@@ -202,7 +204,7 @@ void init_car_sprite(void) {
             if ((y < 20 || y > CAR_ORIG_HEIGHT - 20) && (x < 20 || x > CAR_ORIG_WIDTH - 20) && dist_sq > 22 * 22)
                 continue;
 
-            uint32_t rgb_val = 0xFF2A2A; 
+            uint32_t rgb_val = 0xFF2A2A;
 
             if ((x < 15 || x > 105) && (y > 24 && y < 168)) rgb_val = 0x1A1A1A;
             if (y > 50 && y < 142 && x > 30 && x < 90) rgb_val = 0x111111;
@@ -213,7 +215,7 @@ void init_car_sprite(void) {
             if (y > 182 && ((x > 18 && x < 38) || (x > 82 && x < 102))) rgb_val = 0xFF3333;
             if ((y > 80 && y < 85) && (x == 34 || x == 86)) rgb_val = 0xDDDDDD;
             if (x > 58 && x < 62) rgb_val = 0x000000;
-            
+           
             uint8_t r = (rgb_val >> 16) & 0xFF;
             uint8_t g = (rgb_val >> 8) & 0xFF;
             uint8_t b = rgb_val & 0xFF;
@@ -307,7 +309,7 @@ int fb_init(void)
         perror("mmap"); fb_close(); return -1;
     }
 
-    backbufBytes = line_length * fbHeight;                 
+    backbufBytes = line_length * fbHeight;                
     pbackbuffer  = (unsigned long *)malloc(backbufBytes);  
     if (!pbackbuffer) { perror("malloc backbuffer"); fb_close(); return -1; }
 
@@ -323,7 +325,7 @@ void fb_close(void)
 
 void fb_clear(void)
 {
-    memset(pbackbuffer, 0x00, backbufBytes);             
+    memset(pbackbuffer, 0x00, backbufBytes);            
 }
 
 void fb_update(void)
@@ -380,12 +382,12 @@ void draw_bmp_image(const char *filename)
 
 void draw_game_scene(int offset)
 {
-    fb_clear(); 
+    fb_clear();
 
     // 배경과 차선 그리기
     uint32_t gray = make_pixel(0x40, 0x40, 0x40);
     uint32_t white = make_pixel(0xFF, 0xFF, 0xFF);
-    
+   
     for (int y = 0; y < fbHeight; ++y) {
         for (int x = 0; x < fbWidth; ++x) {
             put_px(pbackbuffer, y, x, gray);
@@ -403,7 +405,7 @@ void draw_game_scene(int offset)
     // 자동차 그리기 (최적화된 sprite 시스템 사용)
     int carX = fbWidth - (CAR_SPRITE_WIDTH + 20);
     int carY = fbHeight / 2 - CAR_SPRITE_HEIGHT / 2 + offset;
-    
+   
     if (carY < 0) carY = 0;
     if (carY + CAR_SPRITE_HEIGHT > fbHeight) carY = fbHeight - CAR_SPRITE_HEIGHT;
 
@@ -422,7 +424,7 @@ void draw_game_scene(int offset)
     // 타이어 장애물 그리기 (크기 정확히 맞춤)
     uint32_t tireColor = 0x000000;    // 타이어 본체 (검정색)
     uint32_t treadColor = 0xFFFFFF;   // 휠자국 (흰색)
-    
+   
     for (int i = 0; i < MAX_OBSTACLES; i++) {
         if (obstacles[i].active) {
             int obsX = obstacles[i].x;
@@ -477,39 +479,38 @@ void draw_game_scene(int offset)
 bool check_collision(int car_lane, int carY_offset) {
     int carX = fbWidth - (CAR_SPRITE_WIDTH + 20);
     int carY = fbHeight / 2 - CAR_SPRITE_HEIGHT / 2 + carY_offset;
-    
+   
     if (carY < 0) carY = 0;
     if (carY + CAR_SPRITE_HEIGHT > fbHeight) carY = fbHeight - CAR_SPRITE_HEIGHT;
-    
-    // 자동차의 실제 충돌 영역을 약간 축소 (더 정확한 충돌 감지)
-    int carMargin = 10; // 자동차 충돌 영역 여백
+   
+
+    int carMargin = 10;
     int carLeft = carX + carMargin;
     int carRight = carX + CAR_SPRITE_WIDTH - carMargin;
     int carTop = carY + carMargin;
     int carBottom = carY + CAR_SPRITE_HEIGHT - carMargin;
-    
+   
     for (int i = 0; i < MAX_OBSTACLES; i++) {
         if (obstacles[i].active) {
             int obsX = obstacles[i].x;
-            
-            // 타이어 크기를 그리기와 동일하게 설정
+       
             int obsW = CAR_ORIG_WIDTH * 0.6;  // 높이 (Y)
             int obsH = CAR_ORIG_HEIGHT * 0.6; // 폭   (X)
             int obsY;
-            
+           
             switch (obstacles[i].lane) {
                 case 0: obsY = fbHeight / 6 - obsW / 2; break;
                 case 1: obsY = fbHeight / 2 - obsW / 2; break;
                 case 2: obsY = fbHeight * 5 / 6 - obsW / 2; break;
                 default: obsY = fbHeight / 2 - obsW / 2;
             }
-            
+           
             // 타이어의 실제 충돌 영역 (여백 없음 - 정확한 충돌)
             int obsLeft = obsX;
             int obsRight = obsX + obsH;
             int obsTop = obsY;
             int obsBottom = obsY + obsW;
-            
+           
             // 충돌 감지 - 더 정확한 범위
             if (carLeft < obsRight && carRight > obsLeft &&
                 carTop < obsBottom && carBottom > obsTop) {
@@ -558,9 +559,10 @@ void update_leaderboard(long new_ms)
 
 void reset_all_systems(void)
 {
-    isPaused=0; elapsed_ms=0; paused_duration_ms=0; carY_offset=0; minigame_over = 0;
+    isPaused=0; elapsed_ms=0; paused_duration_ms=0; carY_offset=0; run_once; minigame_over=0;
     for(int i=0;i<8;i++) ledOnOff(i,0);
     fndDisp(0,0); init_obstacles();
+    text("","");
 }
 
 int main(void)
@@ -587,58 +589,73 @@ int main(void)
     
     while (1)
     {  
-        sprintf(user_life_str,"%d",user_life);
-        /* 버튼 비동기 수신 */
         if (msgrcv(msgID,&msg,sizeof(msg.keyInput)+sizeof(msg.pressed),0,IPC_NOWAIT)!=-1)
         {
             buzzerPlaySong(5); usleep(100000); buzzerStopSong();
             switch(msg.keyInput)
             {
                 case KEY_HOME:
-                    if (gameState==STATE_GAME_MENU||gameState==STATE_GAME_OVER)
+                    if (gameState == STATE_GAME_MENU || gameState == STATE_GAME_OVER)
                     {
-                        text("HELLO USER","MAIN MENU");
+                        
                         reset_all_systems();
+                        text("GET READY","START SOON");
                         draw_bmp_image("Title_start.bmp"); fb_update(); sleep(2);
-                        user_life = 3;
-                        if(msg.keyInput)
-                        {
-                        gameState = STATE_LED_COUNTDOWN;
-                        }
-                    } break;
-
-                case KEY_BACK:
-                    if (gameState==STATE_GAME_RUNNING||isPaused)
-                    {
-                        isPaused=!isPaused;
-                        if(isPaused) gettimeofday(&pauseTime,NULL);
-                        else {
-                            struct timeval r;gettimeofday(&r,NULL);
-                            paused_duration_ms += (r.tv_sec-pauseTime.tv_sec)*1000 +
-                                                  (r.tv_usec-pauseTime.tv_usec)/1000;
-                        }
-                    } 
-                    else if (gameState==STATE_GAME_OVER)
-                    {
                         user_life = 3;
                         gameState = STATE_LED_COUNTDOWN;
                     }
                     break;
 
-                case KEY_SEARCH:
-                    if (gameState==STATE_MINI_GAME)
+                case KEY_BACK:
+                    if (gameState == STATE_GAME_RUNNING || isPaused)
                     {
+                        isPaused = !isPaused;
+                        if (isPaused)
+                        {
+                            gettimeofday(&pauseTime, NULL);
+                        }
+                        else
+                        {
+                            struct timeval resumeTime;
+                            gettimeofday(&resumeTime, NULL);
+                            paused_duration_ms += (resumeTime.tv_sec - pauseTime.tv_sec) * 1000 +
+                                                  (resumeTime.tv_usec - pauseTime.tv_usec) / 1000;
+                        }
+                    }
+                    break;
+               
+                case KEY_MENU:
+                    gameState = STATE_GAME_MENU;
+                    
+                    reset_all_systems();
+                    text("SHADOW RACER","MAIN MENU");
+                    draw_bmp_image("Title.bmp");
+                    fb_update();
+                    break;
+
+                case KEY_SEARCH:
+                    if (gameState == STATE_GAME_OVER)
+                    {
+                        gameState = STATE_MINI_GAME;
                         mini_game();
                         if(minigame_over && minigame_win)
                         {
+                            run_once = 0;
                             user_life++;
                             sprintf(user_life_str,"%d",user_life);
-                            gameState = STATE_GAME_RUNNING;
                             minigame_over = 0;
                             minigame_win = 0;
+                            gameState = STATE_GAME_RUNNING;
+                           
                             goto resume;
                         }
-                        gameState = STATE_GAME_MENU;
+                        else
+                        {
+                            update_leaderboard(elapsed_ms);
+                            reset_all_systems();
+                            gameState = STATE_GAME_MENU;
+                        }
+                        
                     }
                     break;
             }
@@ -647,6 +664,14 @@ int main(void)
         /* 상태 머신 */
         if (!isPaused)
         {
+            resume:
+            
+            sprintf(life_display_str, "LIFE: %d", user_life);
+            if(!run_once)
+            {
+            text(life_display_str, "");
+            run_once = 1;
+            }
             if (gameState==STATE_LED_COUNTDOWN)
             {
                 long best=read_best_record();
@@ -656,31 +681,30 @@ int main(void)
                 {
                     ledOnOff(i,0);
                     buzzerPlaySong(2);
-                    text("Game start at","3 sec");
                     usleep(30000);
                     buzzerStopSong();
                 }
                 gettimeofday(&startTime,NULL);
                 gettimeofday(&lastSpawnTime,NULL);
+               
+                char life_display_str[17];
+                sprintf(life_display_str, "LIFE: %d", user_life);
+                text(life_display_str, "");
+
                 gameState = STATE_GAME_RUNNING;
             }
             else if (gameState==STATE_GAME_RUNNING)
             {
-                resume:
 
-                if(!run_once)
-                {
-                text("YOUR LIFE:",user_life_str);
-                run_once = 1;
-                }
                 struct timeval now; gettimeofday(&now,NULL);
                 elapsed_ms = (now.tv_sec-startTime.tv_sec)*1000 +
                              (now.tv_usec-startTime.tv_usec)/1000 -
                               paused_duration_ms;
                 display_time_on_fnd(elapsed_ms);
+               
 
                 if ((now.tv_sec-lastSpawnTime.tv_sec)*1000 +
-                    (now.tv_usec-lastSpawnTime.tv_usec)/1000 > 1000)
+                    (now.tv_usec-lastSpawnTime.tv_usec)/1000 > 3000)
                 { spawn_obstacle(); lastSpawnTime=now; }
 
                 update_obstacles();
@@ -701,35 +725,20 @@ int main(void)
                     buzzerStopSong();
                     }
                     text("WATCH OUT!","LIFE -1");
-                    
+                   
                     if(user_life == 0)
                     {
                         text("GAME OVER", "CONTINUE?");
-                        gameState = STATE_MINI_GAME;
-                        draw_bmp_image("minigame.bmp"); fb_update(); fndDisp(0,0);
+                        gameState = STATE_GAME_OVER;
+                        draw_bmp_image("game_over.bmp"); fb_update(); fndDisp(0,0);
                     }
                     else
                     {
-                        // 생명이 남아있으면 잠깐 멈춤 후 계속
                         sleep(1);
                     }
                 }
-                
-            }   
-            else if(gameState == STATE_GAME_OVER)
-            {
-                update_leaderboard(elapsed_ms);
-                reset_all_systems(); 
-                draw_bmp_image("game_over.bmp"); fb_update();
-                if(msg.keyInput == KEY_MENU)
-                {
-                    gameState = STATE_GAME_MENU;
-                }
-            }
-
-
+            }  
         }
-         
     }
     return 0;
 }

@@ -37,6 +37,7 @@
 #define STATE_GAME_MENU     3
 #define STATE_GAME_RUNNING  4
 #define STATE_GAME_OVER     5
+#define STATE_MINI_GAME     6
 #define LEADERBOARD_FILE "leaderboard.csv"
 #define MAX_RECORDS 100
 #define FBDEV_FILE "/dev/fb0"
@@ -106,6 +107,7 @@ long read_best_record(void);
 void update_leaderboard(long);
 int  compare_records(const void*, const void*);
 char user_life_str [4];
+int minigame_over;
 
 void init_obstacles(void)
 {
@@ -501,7 +503,7 @@ int main(void)
                     {
                         text("HELLO USER","MAIN MENU");
                         reset_all_systems();
-                        draw_bmp_image("Title.bmp"); fb_update(); sleep(2);
+                        draw_bmp_image("Title_start.bmp"); fb_update(); sleep(2);
                         user_life =3;
                         gameState = STATE_LED_COUNTDOWN;
                     } break;
@@ -519,11 +521,17 @@ int main(void)
                     } break;
 
                 case KEY_SEARCH:
-                    if (gameState==STATE_GAME_RUNNING||gameState==STATE_GAME_OVER)
+                    if (gameState==STATE_MINI_GAME)
+                        {
+                        isPaused = !isPaused;
                         update_leaderboard(elapsed_ms);
-                    reset_all_systems(); gameState=STATE_GAME_MENU;
-                    draw_bmp_image("Title.bmp"); fb_update();
-                    break;
+                        draw_bmp_image("minigame.bmp"); fb_update();
+                        if(minigame_over)
+                        {
+                        isPaused = !isPaused;
+                        }
+                        break;
+                        }
             }
         }
 
@@ -563,7 +571,7 @@ int main(void)
                 {
                     if(check_collision(carY_offset))
                     {
-                                
+                        isPaused = !isPaused;
                         obstacles[striked_obs].x = 2000;    //remove obstacle
                         obstacles[striked_obs].y = 2000;
                         printf("Collision!\n");
@@ -571,13 +579,14 @@ int main(void)
                         text("WATCH OUT!","LIFE -1");
                         if(user_life == 0)
                         {
+                            text("GAME OVER", "CONTINUE?");
                             update_leaderboard(elapsed_ms);
                             gameState = STATE_GAME_OVER;
-                            draw_bmp_image("last.bmp"); fb_update(); fndDisp(0,0);
+                            draw_bmp_image("game_over.bmp"); fb_update(); fndDisp(0,0);
                         }
                         else //life remain get rid of obstacle!
                         {
-                            gameState = STATE_LED_COUNTDOWN;
+                            isPaused = !isPaused;
                         }
                         
                     }
@@ -588,7 +597,6 @@ int main(void)
             else if(gameState == STATE_GAME_OVER)
             {
                 draw_bmp_image("game_over.bmp"); fb_update();
-                text("GAME OVER", "CONTINUE?");
                 if(msg.keyInput == KEY_HOME) //goto first screen if press HOME
                 {
                     gameState = STATE_GAME_MENU;

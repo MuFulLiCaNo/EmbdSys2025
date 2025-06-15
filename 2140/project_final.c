@@ -100,6 +100,7 @@ static inline void put_px(void *buf, int y, int x, uint32_t px)
 
 void mini_game(void)
 {
+    led_stop = 0;
     minigame_over = 0;
     minigame_win = 0;
     draw_bmp_image("minigame.bmp"); fb_update();
@@ -559,7 +560,7 @@ void update_leaderboard(long new_ms)
 
 void reset_all_systems(void)
 {
-    isPaused=0; elapsed_ms=0; paused_duration_ms=0; carY_offset=0; run_once; minigame_over=0;
+    isPaused=0; elapsed_ms=0; paused_duration_ms=0; carY_offset=0; run_once; minigame_over=0; led_stop=0;
     for(int i=0;i<8;i++) ledOnOff(i,0);
     fndDisp(0,0); init_obstacles();
     text("","");
@@ -640,6 +641,7 @@ int main(void)
                         mini_game();
                         if(minigame_over && minigame_win)
                         {
+                            led_stop = 0;
                             run_once = 0;
                             user_life++;
                             sprintf(user_life_str,"%d",user_life);

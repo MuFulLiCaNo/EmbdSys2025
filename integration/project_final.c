@@ -46,7 +46,7 @@
 #define OBSTACLE_WIDTH  40
 #define OBSTACLE_HEIGHT 40
 #define OBSTACLE_SPEED  15
-int user_life;
+volatile int user_life;
 
 static int gameState = STATE_GAME_MENU;
 static int isPaused  = 0;
@@ -482,11 +482,10 @@ int main(void)
 
     BUTTON_MSG_T msg;
     while (1)
-    {
+    {  
         /* 버튼 비동기 수신 */
         if (msgrcv(msgID,&msg,sizeof(msg.keyInput)+sizeof(msg.pressed),0,IPC_NOWAIT)!=-1)
         {
-        repeat: //goto destination
 
             buzzerPlaySong(5); usleep(100000); buzzerStopSong();
             switch(msg.keyInput)
@@ -494,6 +493,7 @@ int main(void)
                 case KEY_HOME:
                     if (gameState==STATE_GAME_MENU||gameState==STATE_GAME_OVER)
                     {
+                        text("HELLO USER","MAIN MENU");
                         reset_all_systems();
                         draw_bmp_image("game_start.bmp"); fb_update(); sleep(2);
                         user_life =3;
@@ -526,6 +526,7 @@ int main(void)
         {
             if (gameState==STATE_LED_COUNTDOWN)
             {
+
                 long best=read_best_record();
                 if(best!=-1){display_time_on_fnd(best);sleep(1);fndDisp(0,0);sleep(1);}
                 for(int i=0;i<3;i++)ledOnOff(i,1);sleep(1);
@@ -552,7 +553,7 @@ int main(void)
                 carY_offset += game_handle_logic(g_accel_data[0]);
                 draw_game_scene(carY_offset); fb_update();
 
-                if (check_collision(carY_offset) || elapsed_ms>=60000)
+                if (check_collision(carY_offset))
                 {
                     if(check_collision(carY_offset))
                     {
@@ -560,19 +561,18 @@ int main(void)
                         user_life--;
                         if(user_life == 0)
                         {
+                            update_leaderboard(elapsed_ms);
                             gameState = STATE_GAME_OVER;
+                            draw_bmp_image("last.bmp"); fb_update(); fndDisp(0,0);
                         }
-                        else
+                        else //life remain
                         {
                             gameState = STATE_LED_COUNTDOWN;
                         }
                         
                     }
-                    else printf("Time up!\n");
 
-                    update_leaderboard(elapsed_ms);
-                    gameState=STATE_GAME_OVER;
-                    draw_bmp_image("last.bmp"); fb_update(); fndDisp(0,0);
+                    
                 }   
             }   
             else if(gameState == STATE_GAME_OVER)
@@ -588,10 +588,6 @@ int main(void)
                     gameState = STATE_LED_COUNTDOWN;
                 }
 
-            }
-            else if(gameState == STATE_GAME_MENU)
-            {
-                goto repeat; //goto first screen
             }
         }
         

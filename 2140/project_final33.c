@@ -70,7 +70,7 @@ static unsigned long *pbackbuffer = NULL;
 static size_t         backbufBytes= 0;
 
 static uint32_t car_sprite[CAR_SPRITE_HEIGHT][CAR_SPRITE_WIDTH];
-BUTTON_MSG_T msg;
+
 static struct timeval startTime, pauseTime, lastSpawnTime;
 static long   elapsed_ms         = 0;
 static long   paused_duration_ms = 0;
@@ -165,13 +165,13 @@ char user_life_str[4];
 int minigame_over;
 int striked_obs;
 void minigame(void);
-
+BUTTON_MSG_T msg;
 int led_now;
 int minigame_win;
 int minigame_over;
 int led_stop;
-int run_once;
-char life_display_str[17];
+
+
 
 void init_obstacles(void)
 {
@@ -559,7 +559,7 @@ void update_leaderboard(long new_ms)
 
 void reset_all_systems(void)
 {
-    isPaused=0; elapsed_ms=0; paused_duration_ms=0; carY_offset=0; run_once; minigame_over=0;
+    isPaused=0; elapsed_ms=0; paused_duration_ms=0; carY_offset=0;
     for(int i=0;i<8;i++) ledOnOff(i,0);
     fndDisp(0,0); init_obstacles();
     text("","");
@@ -597,9 +597,8 @@ int main(void)
                 case KEY_HOME:
                     if (gameState == STATE_GAME_MENU || gameState == STATE_GAME_OVER)
                     {
-                        
+                        text("HELLO USER","MAIN MENU");
                         reset_all_systems();
-                        text("GET READY","START SOON");
                         draw_bmp_image("Title_start.bmp"); fb_update(); sleep(2);
                         user_life = 3;
                         gameState = STATE_LED_COUNTDOWN;
@@ -626,9 +625,7 @@ int main(void)
                
                 case KEY_MENU:
                     gameState = STATE_GAME_MENU;
-                    
                     reset_all_systems();
-                    text("SHADOW RACER","MAIN MENU");
                     draw_bmp_image("Title.bmp");
                     fb_update();
                     break;
@@ -640,13 +637,10 @@ int main(void)
                         mini_game();
                         if(minigame_over && minigame_win)
                         {
-                            run_once = 0;
                             user_life++;
                             sprintf(user_life_str,"%d",user_life);
                             minigame_over = 0;
                             minigame_win = 0;
-                            gameState = STATE_GAME_RUNNING;
-                           
                             goto resume;
                         }
                         else
@@ -666,12 +660,6 @@ int main(void)
         {
             resume:
             
-            sprintf(life_display_str, "LIFE: %d", user_life);
-            if(!run_once)
-            {
-            text(life_display_str, "");
-            run_once = 1;
-            }
             if (gameState==STATE_LED_COUNTDOWN)
             {
                 long best=read_best_record();
@@ -695,6 +683,7 @@ int main(void)
             }
             else if (gameState==STATE_GAME_RUNNING)
             {
+                
 
                 struct timeval now; gettimeofday(&now,NULL);
                 elapsed_ms = (now.tv_sec-startTime.tv_sec)*1000 +
@@ -717,7 +706,6 @@ int main(void)
                     obstacles[striked_obs].active = false;
                     printf("Collision!\n");
                     user_life--;
-                    run_once = 0;
                     for(int z = 0; z < 2; z++)
                     {                    
                     buzzerPlaySong(1);
@@ -735,6 +723,9 @@ int main(void)
                     else
                     {
                         sleep(1);
+                        char life_display_str[17];
+                        sprintf(life_display_str, "LIFE: %d", user_life);
+                        text(life_display_str, "");
                     }
                 }
             }  

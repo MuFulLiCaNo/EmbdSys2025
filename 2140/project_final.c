@@ -622,7 +622,7 @@ int main(void)
                 display_time_on_fnd(elapsed_ms);
 
                 if ((now.tv_sec-lastSpawnTime.tv_sec)*1000 +
-                    (now.tv_usec-lastSpawnTime.tv_usec)/1000 > 3000)
+                    (now.tv_usec-lastSpawnTime.tv_usec)/1000 > 1000)
                 { spawn_obstacle(); lastSpawnTime=now; }
 
                 update_obstacles();

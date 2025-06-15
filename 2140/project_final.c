@@ -162,6 +162,7 @@ void mini_game(void)
         }
     }
     led_stop = 0;       
+
     }
     
 }
@@ -704,9 +705,8 @@ int main(void)
                     if(user_life == 0)
                     {
                         text("GAME OVER", "CONTINUE?");
-                        
                         gameState = STATE_MINI_GAME;
-                        draw_bmp_image("game_over.bmp"); fb_update(); fndDisp(0,0);
+                        draw_bmp_image("minigame.bmp"); fb_update(); fndDisp(0,0);
                     }
                     else
                     {
@@ -719,7 +719,7 @@ int main(void)
             else if(gameState == STATE_GAME_OVER)
             {
                 update_leaderboard(elapsed_ms);
-                reset_all_systems();
+                reset_all_systems(); 
                 draw_bmp_image("game_over.bmp"); fb_update();
                 if(msg.keyInput == KEY_MENU)
                 {

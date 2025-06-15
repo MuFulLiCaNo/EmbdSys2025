@@ -17,12 +17,10 @@ void* accel_thread_func(void* arg)
     {
         fp = fopen(ACCELPATH "data", "rt");
         if (fp == NULL) {
-            usleep(100000);
             continue;
         }
         fscanf(fp, "%d, %d, %d", &g_accel_data[0], &g_accel_data[1], &g_accel_data[2]);
         fclose(fp);
-        usleep(100000); // 0.1초 간격으로 데이터 읽기
     }
     return NULL;
 }

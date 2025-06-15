@@ -545,7 +545,10 @@ int main(void)
                         reset_all_systems();
                         draw_bmp_image("Title_start.bmp"); fb_update(); sleep(2);
                         user_life = 3;
+                        if(msg.keyInput)
+                        {
                         gameState = STATE_LED_COUNTDOWN;
+                        }
                     } break;
 
                 case KEY_BACK:
@@ -577,16 +580,6 @@ int main(void)
                             isPaused = !isPaused;
                         }
                     }
-                    else if (gameState==STATE_GAME_RUNNING||gameState==STATE_GAME_OVER)
-                    {
-                        update_leaderboard(elapsed_ms);
-                        reset_all_systems(); 
-                        gameState=STATE_GAME_MENU;
-                        draw_bmp_image("Title.bmp"); fb_update();
-                    }
-                    break;
-                case KEY_MENU:
-                    draw_bmp_image("Title.bmp"); fb_update();
                     break;
             }
         }
@@ -597,7 +590,7 @@ int main(void)
             if (gameState==STATE_LED_COUNTDOWN)
             {
                 long best=read_best_record();
-                if(best!=-1){display_time_on_fnd(best);usleep(1000);fndDisp(0,0);usleep(1000);}
+                if(best!=-1){display_time_on_fnd(best);usleep(500000) ;fndDisp(0,0); usleep(500000);}
                 for(int i=0;i<3;i++)ledOnOff(i,1);usleep(300000);
                 for(int i=2;i>=0;i--)
                 {
@@ -608,7 +601,7 @@ int main(void)
                 }
                 gettimeofday(&startTime,NULL);
                 gettimeofday(&lastSpawnTime,NULL);
-                gameState=STATE_GAME_RUNNING;
+                gameState = STATE_GAME_RUNNING;
             }
             else if (gameState==STATE_GAME_RUNNING)
             {
@@ -619,7 +612,7 @@ int main(void)
                 display_time_on_fnd(elapsed_ms);
                 
                 sprintf(user_life_str,"%d",user_life);
-                text("USER LIFE:",user_life_str);
+                
 
                 if ((now.tv_sec-lastSpawnTime.tv_sec)*1000 +
                     (now.tv_usec-lastSpawnTime.tv_usec)/1000 > 3000)
@@ -660,8 +653,20 @@ int main(void)
             }   
             else if(gameState == STATE_GAME_OVER)
             {
+                update_leaderboard(elapsed_ms);
+                reset_all_systems(); 
                 draw_bmp_image("game_over.bmp"); fb_update();
+                if(msg.keyInput == KEY_MENU)
+                {
+                draw_bmp_image("minigame.bmp"); fb_update();
+                }
+                else if(msg.keyInput == KEY_HOME)
+                {
+                    gameState = STATE_GAME_MENU;
+                }
             }
+
+
         }
          
     }

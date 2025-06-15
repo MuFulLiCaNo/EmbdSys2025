@@ -562,9 +562,15 @@ int main(void)
             if (gameState==STATE_LED_COUNTDOWN)
             {
                 long best=read_best_record();
-                if(best!=-1){display_time_on_fnd(best);sleep(1);fndDisp(0,0);sleep(1);}
-                for(int i=0;i<3;i++)ledOnOff(i,1);sleep(1);
-                for(int i=2;i>=0;i--){ledOnOff(i,0);sleep(1);}
+                if(best!=-1){display_time_on_fnd(best);usleep(300000);fndDisp(0,0);usleep(300000);}
+                for(int i=0;i<3;i++)ledOnOff(i,1);usleep(300000);
+                for(int i=2;i>=0;i--)
+                {
+                    ledOnOff(i,0);
+                    buzzerPlaySong(2);
+                    usleep(30000);
+                    buzzerStopSong();
+                }
                 gettimeofday(&startTime,NULL);
                 gettimeofday(&lastSpawnTime,NULL);
                 gameState=STATE_GAME_RUNNING;
@@ -594,6 +600,12 @@ int main(void)
                     obstacles[striked_obs].active = false;
                     printf("Collision!\n");
                     user_life--;
+                    for(int z = 0; z < 2; z++)
+                    {                    
+                    buzzerPlaySong(1);
+                    usleep(50000);
+                    buzzerStopSong();
+                    }
                     text("WATCH OUT!","LIFE -1");
                     
                     if(user_life == 0)

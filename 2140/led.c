@@ -23,6 +23,11 @@ int ledOnOff (int ledNum, int onOff)
     write (fd, &ledValue, 4);
 }
 
+int ledStatus(void)
+{
+    return ledValue;
+}
+
 int ledLibInit(void)
 {
     fd=open("/dev/periled", O_WRONLY);

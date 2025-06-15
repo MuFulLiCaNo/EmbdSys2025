@@ -119,6 +119,40 @@ char user_life_str[4];
 int minigame_over;
 int striked_obs;
 int run_once = 0;
+int led_stop;
+BUTTON_MSG_T msg;
+int led_now;
+int minigame_win;
+void mini_game(void)
+{
+    minigame_over = 0;
+    minigame_win = 0;
+    draw_bmp_image("minigame.bmp"); fb_update();
+    while(!led_stop)
+    {
+    for(int i = 0; i < 5; i++)
+    {
+        ledOnOff(i,rand()%2);       
+    }
+    usleep(50000);
+    if(msg.keyInput == KEY_VOLUMEUP)
+    {
+        led_stop = !led_stop;
+    }
+    if((led_now = ledStatus()) == 31) //if led is all 1(ON)
+    {
+        text("minigame success","CONGRATS!");
+        break;
+    }
+    minigame_win = 1;
+    minigame_over = 1;
+    }
+    
+}
+
+
+
+
 
 void init_obstacles(void)
 {
@@ -507,7 +541,7 @@ void update_leaderboard(long new_ms)
 
 void reset_all_systems(void)
 {
-    isPaused=0; elapsed_ms=0; paused_duration_ms=0; carY_offset=0;
+    isPaused=0; elapsed_ms=0; paused_duration_ms=0; carY_offset=0; minigame_over = 0;
     for(int i=0;i<8;i++) ledOnOff(i,0);
     fndDisp(0,0); init_obstacles();
 }
@@ -533,7 +567,7 @@ int main(void)
     gameState = STATE_GAME_MENU;
     draw_bmp_image("Title.bmp"); fb_update();
 
-    BUTTON_MSG_T msg;
+    
     while (1)
     {  
         sprintf(user_life_str,"%d",user_life);
@@ -577,12 +611,17 @@ int main(void)
                 case KEY_SEARCH:
                     if (gameState==STATE_MINI_GAME)
                     {
-                        update_leaderboard(elapsed_ms);
-                        draw_bmp_image("minigame.bmp"); fb_update();
+                        mini_game();
                         if(minigame_over)
                         {
                             isPaused = !isPaused;
                         }
+                        if(minigame_win)
+                        {
+                            user_life++;
+                            goto resume;
+                        }
+                        gameState = STATE_GAME_MENU;
                     }
                     break;
             }
@@ -610,6 +649,8 @@ int main(void)
             }
             else if (gameState==STATE_GAME_RUNNING)
             {
+                resume:
+
                 if(!run_once)
                 {
                 text("YOUR LIFE:",user_life_str);
@@ -647,8 +688,8 @@ int main(void)
                     if(user_life == 0)
                     {
                         text("GAME OVER", "CONTINUE?");
-                        update_leaderboard(elapsed_ms);
-                        gameState = STATE_GAME_OVER;
+                        
+                        gameState = STATE_MINI_GAME;
                         draw_bmp_image("game_over.bmp"); fb_update(); fndDisp(0,0);
                     }
                     else
@@ -664,11 +705,7 @@ int main(void)
                 update_leaderboard(elapsed_ms);
                 reset_all_systems(); 
                 draw_bmp_image("game_over.bmp"); fb_update();
-                if(msg.keyInput == KEY_SEARCH)
-                {
-                    gameState = STATE_MINI_GAME;
-                }
-                else if(msg.keyInput == KEY_MENU)
+                if(msg.keyInput == KEY_MENU)
                 {
                     gameState = STATE_GAME_MENU;
                 }

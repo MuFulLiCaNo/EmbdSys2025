@@ -23,7 +23,7 @@
 #include <linux/kd.h>
 #include <dirent.h>
 #include <stdint.h>   
-
+#include "textlcd.h"
 #include "led.h"
 #include "button.h"
 #include "fnd.h"
@@ -37,7 +37,6 @@
 #define STATE_GAME_MENU     3
 #define STATE_GAME_RUNNING  4
 #define STATE_GAME_OVER     5
-
 #define LEADERBOARD_FILE "leaderboard.csv"
 #define MAX_RECORDS 100
 #define FBDEV_FILE "/dev/fb0"
@@ -47,6 +46,7 @@
 #define OBSTACLE_WIDTH  40
 #define OBSTACLE_HEIGHT 40
 #define OBSTACLE_SPEED  15
+int user_life;
 
 static int gameState = STATE_GAME_MENU;
 static int isPaused  = 0;
@@ -105,7 +105,7 @@ void display_time_on_fnd(long ms);
 long read_best_record(void);
 void update_leaderboard(long);
 int  compare_records(const void*, const void*);
-
+char user_life_str [4];
 
 void init_obstacles(void)
 {
@@ -166,7 +166,6 @@ void signal_handler(int sig)
     accelExit();
     buttonExit();
     fb_close();
-
     int conFD = open("/dev/tty0", O_RDWR);
     ioctl(conFD, KDSETMODE, KD_TEXT);
     close(conFD);
@@ -487,6 +486,8 @@ int main(void)
         /* 버튼 비동기 수신 */
         if (msgrcv(msgID,&msg,sizeof(msg.keyInput)+sizeof(msg.pressed),0,IPC_NOWAIT)!=-1)
         {
+        repeat: //goto destination
+
             buzzerPlaySong(5); usleep(100000); buzzerStopSong();
             switch(msg.keyInput)
             {
@@ -495,6 +496,7 @@ int main(void)
                     {
                         reset_all_systems();
                         draw_bmp_image("game_start.bmp"); fb_update(); sleep(2);
+                        user_life =3;
                         gameState = STATE_LED_COUNTDOWN;
                     } break;
 
@@ -539,6 +541,8 @@ int main(void)
                              (now.tv_usec-startTime.tv_usec)/1000 -
                               paused_duration_ms;
                 display_time_on_fnd(elapsed_ms);
+                sprintf(user_life_str,"%d",user_life);
+                text("USER LIFE:",user_life_str);
 
                 if ((now.tv_sec-lastSpawnTime.tv_sec)*1000 +
                     (now.tv_usec-lastSpawnTime.tv_usec)/1000 > 1500)
@@ -551,15 +555,46 @@ int main(void)
                 if (check_collision(carY_offset) || elapsed_ms>=60000)
                 {
                     if(check_collision(carY_offset))
+                    {
                         printf("Collision!\n");
+                        user_life--;
+                        if(user_life == 0)
+                        {
+                            gameState = STATE_GAME_OVER;
+                        }
+                        else
+                        {
+                            gameState = STATE_LED_COUNTDOWN;
+                        }
+                        
+                    }
                     else printf("Time up!\n");
 
                     update_leaderboard(elapsed_ms);
                     gameState=STATE_GAME_OVER;
                     draw_bmp_image("last.bmp"); fb_update(); fndDisp(0,0);
+                }   
+            }   
+            else if(gameState == STATE_GAME_OVER)
+            {
+                text("GAME OVER", "CONTINUE?");
+                if(msg.keyInput == KEY_HOME) //goto first screen if press HOME
+                {
+                    gameState = STATE_GAME_MENU;
                 }
+                else if(msg.keyInput == KEY_BACK) //restart if press BACK
+                {
+                    user_life = 3;
+                    gameState = STATE_LED_COUNTDOWN;
+                }
+
+            }
+            else if(gameState == STATE_GAME_MENU)
+            {
+                goto repeat; //goto first screen
             }
         }
+        
         usleep(30000); 
     }
     return 0;

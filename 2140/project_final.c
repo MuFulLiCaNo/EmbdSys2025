@@ -61,6 +61,9 @@ struct fb_fix_screeninfo fbfix;
 int fbWidth, fbHeight;
 int line_length;                 
 
+
+pthread_t text_ingame;
+
 static unsigned long *pfbmap      = NULL; 
 static unsigned long *pbackbuffer = NULL; 
 static size_t         backbufBytes= 0;
@@ -532,6 +535,7 @@ int main(void)
     BUTTON_MSG_T msg;
     while (1)
     {  
+        sprintf(user_life_str,"%d",user_life);
         /* 버튼 비동기 수신 */
         if (msgrcv(msgID,&msg,sizeof(msg.keyInput)+sizeof(msg.pressed),0,IPC_NOWAIT)!=-1)
         {
@@ -604,14 +608,12 @@ int main(void)
             }
             else if (gameState==STATE_GAME_RUNNING)
             {
+                
                 struct timeval now; gettimeofday(&now,NULL);
                 elapsed_ms = (now.tv_sec-startTime.tv_sec)*1000 +
                              (now.tv_usec-startTime.tv_usec)/1000 -
                               paused_duration_ms;
                 display_time_on_fnd(elapsed_ms);
-                
-                sprintf(user_life_str,"%d",user_life);
-                
 
                 if ((now.tv_sec-lastSpawnTime.tv_sec)*1000 +
                     (now.tv_usec-lastSpawnTime.tv_usec)/1000 > 3000)

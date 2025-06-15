@@ -130,22 +130,38 @@ void mini_game(void)
     draw_bmp_image("minigame.bmp"); fb_update();
     while(!led_stop)
     {
-    for(int i = 0; i < 5; i++)
+
+    msgrcv(msgID,&msg,sizeof(msg.keyInput)+sizeof(msg.pressed),0,IPC_NOWAIT);
+    
+    for(int i = 0; i < 3; i++)
     {
-        ledOnOff(i,rand()%2);       
+        ledOnOff(i,rand()%2);   
+        usleep(100000);    
     }
-    usleep(50000);
+    
     if(msg.keyInput == KEY_VOLUMEUP)
     {
         led_stop = !led_stop;
-    }
-    if((led_now = ledStatus()) == 31) //if led is all 1(ON)
-    {
+        usleep(300000);
+    if((led_now = ledStatus()) == 7) //if led is all 1(ON)
+        {
         text("minigame success","CONGRATS!");
+        
+        buzzerPlaySong(1);//success music
+        usleep(300000);
+        buzzerStopSong();
+        buzzerPlaySong(3);
+        usleep(300000);
+        buzzerStopSong();
+        buzzerPlaySong(5);
+        usleep(300000);
+        buzzerStopSong();
+        minigame_win = 1;
+        minigame_over = 1;
         break;
+        }
     }
-    minigame_win = 1;
-    minigame_over = 1;
+    led_stop = 0;       
     }
     
 }
@@ -612,13 +628,13 @@ int main(void)
                     if (gameState==STATE_MINI_GAME)
                     {
                         mini_game();
-                        if(minigame_over)
-                        {
-                            isPaused = !isPaused;
-                        }
-                        if(minigame_win)
+                        if(minigame_over && minigame_win)
                         {
                             user_life++;
+                            sprintf(user_life_str,"%d",user_life);
+                            gameState = STATE_GAME_RUNNING;
+                            minigame_over = 0;
+                            minigame_win = 0;
                             goto resume;
                         }
                         gameState = STATE_GAME_MENU;
@@ -703,7 +719,7 @@ int main(void)
             else if(gameState == STATE_GAME_OVER)
             {
                 update_leaderboard(elapsed_ms);
-                reset_all_systems(); 
+                reset_all_systems();
                 draw_bmp_image("game_over.bmp"); fb_update();
                 if(msg.keyInput == KEY_MENU)
                 {

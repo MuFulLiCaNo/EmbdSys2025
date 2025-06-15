@@ -12,7 +12,7 @@ OBJS            := $(SRCS:.c=.o)
 
 
 LIB_A           := libMyPeri.a
-LIB_OBJS        := fnd.o led.o button.o buzzer.o accel.o
+LIB_OBJS        := fnd.o led.o button.o buzzer.o accel.o textlcd.o
 
 
 CFLAGS          := -I.
@@ -54,6 +54,9 @@ buzzer.o: buzzer.h buzzer.c
 
 accel.o: accel.h accel.c
 	$(CC) $(CFLAGS) -c accel.c -o accel.o
+
+textlcd.o: textlcd.h textlcd.c
+	$(CC) $(CFLAGS) -c textlcd.c -o textlcd.o
 
 
 

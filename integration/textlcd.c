@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <stdib.h>
+#include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -19,7 +19,7 @@ int text(const char *str1 , const char *str2)
 	len =strlen(str1);
 
 	if ( len > COLUMN_NUM)
-		memcpy(stlcd.TextData[stlcd.cmdData - 1], str1, COLUMN_NUM)
+		memcpy(stlcd.TextData[stlcd.cmdData - 1], str1, COLUMN_NUM);
 	else
 		memcpy(stlcd.TextData[stlcd.cmdData - 1], str1, len);
 
@@ -37,7 +37,7 @@ int text(const char *str1 , const char *str2)
 	len = strlen(str2);
 
 	if(len > COLUMN_NUM)
-		memcpy(stlcd.TextData[stlcd.cmdData - 1], str2, COLUMN_NUM)
+		memcpy(stlcd.TextData[stlcd.cmdData - 1], str2, COLUMN_NUM);
 	else
 		memcpy(stlcd.TextData[stlcd.cmdData -1 ], str2, len);
 

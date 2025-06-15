@@ -393,6 +393,7 @@ void draw_game_scene(int offset)
     }
 }
 
+int striked_obs;
 
 bool check_collision(int offset)
 {
@@ -415,7 +416,12 @@ bool check_collision(int offset)
             oB = obstacles[i].y + OBSTACLE_HEIGHT;
 
         if (carL < oR && carR > oL && carT < oB && carB > oT)
-            return true;
+        { 
+            striked_obs = i;
+            return true; //collisoned!
+ 
+
+        }
     }
     return false;
 }
@@ -473,12 +479,12 @@ int main(void)
     if (msgID<0){fprintf(stderr,"button init fail\n");return 1;}
 
     /* 부팅 효과 */
-    for(int i=1;i<=8;i++){ledOnOff(i-1,1);buzzerPlaySong(i);usleep(50000);}
-    for(int i=7;i>=0;i--){ledOnOff(i,0);usleep(50000);} buzzerStopSong();
+    //for(int i=1;i<=8;i++){ledOnOff(i-1,1);buzzerPlaySong(i);usleep(50000);}
+    //for(int i=7;i>=0;i--){ledOnOff(i,0);usleep(50000);} buzzerStopSong();
 
     reset_all_systems();
     gameState = STATE_GAME_MENU;
-    draw_bmp_image("last.bmp"); fb_update();
+    draw_bmp_image("Title.bmp"); fb_update();
 
     BUTTON_MSG_T msg;
     while (1)
@@ -495,7 +501,7 @@ int main(void)
                     {
                         text("HELLO USER","MAIN MENU");
                         reset_all_systems();
-                        draw_bmp_image("game_start.bmp"); fb_update(); sleep(2);
+                        draw_bmp_image("Title.bmp"); fb_update(); sleep(2);
                         user_life =3;
                         gameState = STATE_LED_COUNTDOWN;
                     } break;
@@ -516,7 +522,7 @@ int main(void)
                     if (gameState==STATE_GAME_RUNNING||gameState==STATE_GAME_OVER)
                         update_leaderboard(elapsed_ms);
                     reset_all_systems(); gameState=STATE_GAME_MENU;
-                    draw_bmp_image("last.bmp"); fb_update();
+                    draw_bmp_image("Title.bmp"); fb_update();
                     break;
             }
         }
@@ -557,6 +563,9 @@ int main(void)
                 {
                     if(check_collision(carY_offset))
                     {
+                                
+                        obstacles[striked_obs].x = 2000;    //remove obstacle
+                        obstacles[striked_obs].y = 2000;
                         printf("Collision!\n");
                         user_life--;
                         text("WATCH OUT!","LIFE -1");
@@ -566,7 +575,7 @@ int main(void)
                             gameState = STATE_GAME_OVER;
                             draw_bmp_image("last.bmp"); fb_update(); fndDisp(0,0);
                         }
-                        else //life remain
+                        else //life remain get rid of obstacle!
                         {
                             gameState = STATE_LED_COUNTDOWN;
                         }
@@ -578,6 +587,7 @@ int main(void)
             }   
             else if(gameState == STATE_GAME_OVER)
             {
+                draw_bmp_image("game_over.bmp"); fb_update();
                 text("GAME OVER", "CONTINUE?");
                 if(msg.keyInput == KEY_HOME) //goto first screen if press HOME
                 {

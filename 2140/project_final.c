@@ -118,6 +118,7 @@ int  compare_records(const void*, const void*);
 char user_life_str[4];
 int minigame_over;
 int striked_obs;
+int run_once = 0;
 
 void init_obstacles(void)
 {
@@ -599,6 +600,7 @@ int main(void)
                 {
                     ledOnOff(i,0);
                     buzzerPlaySong(2);
+                    text("Game start at","3 sec");
                     usleep(30000);
                     buzzerStopSong();
                 }
@@ -608,7 +610,11 @@ int main(void)
             }
             else if (gameState==STATE_GAME_RUNNING)
             {
-                
+                if(!run_once)
+                {
+                text("YOUR LIFE:",user_life_str);
+                run_once = 1;
+                }
                 struct timeval now; gettimeofday(&now,NULL);
                 elapsed_ms = (now.tv_sec-startTime.tv_sec)*1000 +
                              (now.tv_usec-startTime.tv_usec)/1000 -
@@ -629,6 +635,7 @@ int main(void)
                     obstacles[striked_obs].active = false;
                     printf("Collision!\n");
                     user_life--;
+                    run_once = 0;
                     for(int z = 0; z < 2; z++)
                     {                    
                     buzzerPlaySong(1);
